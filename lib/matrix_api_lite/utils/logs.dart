@@ -23,6 +23,8 @@
 
 import 'package:matrix/matrix_api_lite/utils/print_logs_native.dart'
     if (dart.library.html) 'print_logs_web.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:matrix/matrix_api_lite/utils/hive_models/hive_log.dart';
 
 enum Level {
   wtf,
@@ -49,6 +51,8 @@ class Logs {
 
   final List<LogEvent> outputEvents = [];
 
+  Box? box;
+
   Logs._internal();
 
   void addLogEvent(LogEvent logEvent) {
@@ -56,12 +60,45 @@ class Logs {
     if (logEvent.level.index <= level.index) {
       logEvent.printOut();
     }
+
+    if (box != null) {
+      box.add(
+        HiveLog(
+          title: logEvent.title,
+          dateTime: logEvent.dateTime,
+          exception: logEvent.exception,
+          stackTrace: logEvent.stackTrace,
+          level: logEvent.level.index,
+        ),
+      );
+    }
+  }
+
+  Future<void> initHive() async {
+    await Hive.initFlutter();
+    Hive.registerAdapter(HiveLogAdapter());
+    await Hive.openBox('hiveLog');
+
+    box = Hive.box('hiveLog');
+    for (int i = 0; i < box.length - 1; i++) {
+      var data = box.getAt(i)!;
+      outputEvents.add(
+        LogEvent(
+          data.title,
+          data.dateTime,
+          exception: data.exception,
+          stackTrace: data.stackTrace,
+          level: Level.values[data.level],
+        ),
+      );
+    }
   }
 
   void wtf(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
+          DateTime.now(),
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.wtf,
@@ -72,6 +109,7 @@ class Logs {
       addLogEvent(
         LogEvent(
           title,
+          DateTime.now(),
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.error,
@@ -82,6 +120,7 @@ class Logs {
       addLogEvent(
         LogEvent(
           title,
+          DateTime.now(),
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.warning,
@@ -92,6 +131,7 @@ class Logs {
       addLogEvent(
         LogEvent(
           title,
+          DateTime.now(),
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.info,
@@ -102,6 +142,7 @@ class Logs {
       addLogEvent(
         LogEvent(
           title,
+          DateTime.now(),
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.debug,
@@ -112,6 +153,7 @@ class Logs {
       addLogEvent(
         LogEvent(
           title,
+          DateTime.now(),
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.verbose,
@@ -122,12 +164,14 @@ class Logs {
 // ignore: avoid_print
 class LogEvent {
   final String title;
+  final DateTime dateTime;
   final Object? exception;
   final StackTrace? stackTrace;
   final Level level;
 
   LogEvent(
-    this.title, {
+    this.title,
+    this.dateTime, {
     this.exception,
     this.stackTrace,
     this.level = Level.debug,
