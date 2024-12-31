@@ -62,7 +62,7 @@ class Logs {
     }
 
     if (box != null) {
-      box.add(
+      box!.add(
         HiveLog(
           title: logEvent.title,
           dateTime: logEvent.dateTime,
@@ -80,8 +80,8 @@ class Logs {
     await Hive.openBox('hiveLog');
 
     box = Hive.box('hiveLog');
-    for (int i = 0; i < box.length - 1; i++) {
-      var data = box.getAt(i)!;
+    for (int i = 0; i < box!.length - 1; i++) {
+      var data = box!.getAt(i)!;
       outputEvents.add(
         LogEvent(
           data.title,
