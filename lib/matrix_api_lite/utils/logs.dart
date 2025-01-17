@@ -23,6 +23,8 @@
 
 import 'package:matrix/matrix_api_lite/utils/print_logs_native.dart'
     if (dart.library.html) 'print_logs_web.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:matrix/matrix_api_lite/utils/hive_models/hive_log.dart';
 
 enum Level {
   wtf,
@@ -47,20 +49,61 @@ class Logs {
   Level level = Level.info;
   bool nativeColors = true;
 
-  final List<LogEvent> outputEvents = [];
+  List<LogEvent> get outputEvents {
+    List<LogEvent> events = [];
+    for (int i = 0; i < logBox!.length - 1; i++) {
+      var data = logBox!.getAt(i)!;
+      events.insert(
+        0,
+        LogEvent(
+          data.title,
+          data.dateTime,
+          exception: data.exception,
+          stackTrace: data.stackTrace,
+          level: Level.values[data.level],
+        ),
+      );
+    }
+    return events;
+  }
+
+  String logBoxName = 'log_box';
+  Box? logBox;
 
   Logs._internal();
 
-  void addLogEvent(LogEvent logEvent) {
-    outputEvents.add(logEvent);
+  void addLogEvent(LogEvent logEvent) async {
     if (logEvent.level.index <= level.index) {
       logEvent.printOut();
     }
+
+    if (!Hive.isBoxOpen(logBoxName)) {
+      await Hive.openBox(logBoxName);
+      logBox = Hive.box(logBoxName);
+    }
+    if (logBox != null) {
+      logBox!.add(
+        HiveLog(
+          title: logEvent.title,
+          dateTime: logEvent.dateTime,
+          exception: logEvent.exception,
+          stackTrace: logEvent.stackTrace,
+          level: logEvent.level.index,
+        ),
+      );
+    }
+  }
+
+  Future<void> initHive() async {
+    await Hive.initFlutter();
+    Hive.registerAdapter(HiveLogAdapter());
+    await Hive.openBox(logBoxName);
+    logBox = Hive.box(logBoxName);
   }
 
   void wtf(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
-        LogEvent(
+        getLogEvent(
           title,
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
@@ -70,7 +113,7 @@ class Logs {
 
   void e(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
-        LogEvent(
+        getLogEvent(
           title,
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
@@ -80,7 +123,7 @@ class Logs {
 
   void w(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
-        LogEvent(
+        getLogEvent(
           title,
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
@@ -90,7 +133,7 @@ class Logs {
 
   void i(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
-        LogEvent(
+        getLogEvent(
           title,
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
@@ -100,7 +143,7 @@ class Logs {
 
   void d(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
-        LogEvent(
+        getLogEvent(
           title,
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
@@ -110,24 +153,43 @@ class Logs {
 
   void v(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
-        LogEvent(
+        getLogEvent(
           title,
           exception: exception,
           stackTrace: stackTraceConverter(stackTrace),
           level: Level.verbose,
         ),
       );
+
+  LogEvent getLogEvent(
+    String title, {
+    Object? exception,
+    StackTrace? stackTrace,
+    Level level = Level.debug,
+  }) {
+    return LogEvent(
+      title,
+      DateTime.now(),
+      exception: exception == null ? null : exception!.toString(),
+      stackTrace: stackTraceConverter(stackTrace) == null
+          ? null
+          : stackTraceConverter(stackTrace)!.toString(),
+      level: level,
+    );
+  }
 }
 
 // ignore: avoid_print
 class LogEvent {
   final String title;
-  final Object? exception;
-  final StackTrace? stackTrace;
+  final DateTime dateTime;
+  final String? exception;
+  final String? stackTrace;
   final Level level;
 
   LogEvent(
-    this.title, {
+    this.title,
+    this.dateTime, {
     this.exception,
     this.stackTrace,
     this.level = Level.debug,
