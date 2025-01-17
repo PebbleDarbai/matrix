@@ -26,9 +26,9 @@ Future<T> runBenchmarked<T>(
   Future<T> Function() func, [
   int? itemCount,
 ]) async {
-  if (Logs().level.index < Level.debug.index) {
-    return func();
-  }
+  // if (Logs().level.index < Level.debug.index) {
+  //   return func();
+  // }
   final start = DateTime.now();
   final result = await func();
   final milliseconds =
