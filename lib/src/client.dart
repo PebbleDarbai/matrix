@@ -724,6 +724,7 @@ class Client extends MatrixApi {
       Logs().e('Logout failed', e, s);
       rethrow;
     } finally {
+      accessToken = null;
       await clear();
     }
   }
@@ -2345,6 +2346,7 @@ class Client extends MatrixApi {
           ? await syncRequest
           : await syncRequest.timeout(responseTimeout);
 
+      if (accessToken == null) return;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.processing));
       if (syncResp == null) throw syncError ?? 'Unknown sync error';
       if (_currentSyncId != syncRequest.hashCode) {
