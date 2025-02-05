@@ -758,8 +758,7 @@ class Room {
 
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
-    if (file is MatrixImageFile &&
-        (thumbnail == null || shrinkImageMaxDimension != null)) {
+    if (file is MatrixImageFile) {
       syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![fileSendingStatusKey] =
           FileSendingStatus.generatingThumbnail.name;
