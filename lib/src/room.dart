@@ -1026,8 +1026,10 @@ class Room {
           '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.roomId!}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>$replyHtml</blockquote></mx-reply>$repliedHtml';
       // We escape all @room-mentions here to prevent accidental room pings when an admin
       // replies to a message containing that!
-      content['body'] =
-          '${replyText.replaceAll('@room', '@\u200broom')}\n\n${content.tryGet<String>('body') ?? ''}';
+      if (content['forwarded_room_id'] == null) {
+        content['body'] =
+            '${replyText.replaceAll('@room', '@\u200broom')}\n\n${content.tryGet<String>('body') ?? ''}';
+      }
       content['m.relates_to'] = {
         'm.in_reply_to': {
           'event_id': inReplyTo.eventId,
