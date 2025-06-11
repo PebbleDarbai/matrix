@@ -50,9 +50,9 @@ class Logs {
   bool nativeColors = true;
 
   List<LogEvent> get outputEvents {
-    List<LogEvent> events = [];
+    final events = <LogEvent>[];
     for (int i = 0; i < logBox!.length - 1; i++) {
-      var data = logBox!.getAt(i)!;
+      final data = logBox!.getAt(i)!;
       events.insert(
         0,
         LogEvent(
@@ -69,6 +69,7 @@ class Logs {
 
   String logBoxName = 'log_box';
   Box? logBox;
+  var logLimit = 0;
 
   Logs._internal();
 
@@ -82,7 +83,8 @@ class Logs {
       logBox = Hive.box(logBoxName);
     }
     if (logBox != null) {
-      logBox!.add(
+      logBox!
+          .add(
         HiveLog(
           title: logEvent.title,
           dateTime: logEvent.dateTime,
@@ -90,11 +92,24 @@ class Logs {
           stackTrace: logEvent.stackTrace,
           level: logEvent.level.index,
         ),
+      )
+          .then(
+        (_) {
+          if (logLimit <= 0) {
+            return;
+          }
+          if (logBox!.length > logLimit) {
+            for (int i = 0; i < (logBox!.length - logLimit); i++) {
+              logBox!.deleteAt(0);
+            }
+          }
+        },
       );
     }
   }
 
-  Future<void> initHive() async {
+  Future<void> initHive({int limit = 0}) async {
+    logLimit = limit;
     await Hive.initFlutter();
     Hive.registerAdapter(HiveLogAdapter());
     await Hive.openBox(logBoxName);
